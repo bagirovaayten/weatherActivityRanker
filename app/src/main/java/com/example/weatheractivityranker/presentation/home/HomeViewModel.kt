@@ -2,7 +2,6 @@ package com.example.weatheractivityranker.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.weatheractivityranker.domain.model.AppError
 import com.example.weatheractivityranker.domain.model.City
 import com.example.weatheractivityranker.domain.usecase.GetActivityRankingsUseCase
 import com.example.weatheractivityranker.domain.usecase.SearchCitiesUseCase
@@ -64,8 +63,7 @@ class HomeViewModel @Inject constructor(
                                     it.copy(
                                         citySuggestions = emptyList(),
                                         isSearching = false,
-                                        errorMessage = (throwable as? AppError)?.toUserMessage()
-                                            ?: throwable.message.orEmpty(),
+                                        errorMessage = throwable.toUserMessage(),
                                     )
                                 }
                             }
@@ -96,8 +94,7 @@ class HomeViewModel @Inject constructor(
                                 _uiState.update {
                                     it.copy(
                                         isLoadingRankings = false,
-                                        errorMessage = (throwable as? AppError)?.toUserMessage()
-                                            ?: throwable.message.orEmpty(),
+                                        errorMessage = throwable.toUserMessage(),
                                     )
                                 }
                             }
@@ -109,32 +106,19 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onSearchQueryChanged(query: String) {
-        val clearsSelection = _uiState.value.selectedCity != null &&
-            query != _uiState.value.selectedCity?.displayLabel
+        val editingAwayFromSelection = _uiState.value.selectedCity?.let { query != it.displayLabel } == true
 
         _uiState.update {
             it.copy(
                 searchQuery = query,
                 errorMessage = null,
-                selectedCity = if (it.selectedCity != null && query != it.selectedCity.displayLabel) {
-                    null
-                } else {
-                    it.selectedCity
-                },
-                rankedActivities = if (it.selectedCity != null && query != it.selectedCity.displayLabel) {
-                    emptyList()
-                } else {
-                    it.rankedActivities
-                },
-                dailyForecasts = if (it.selectedCity != null && query != it.selectedCity.displayLabel) {
-                    emptyList()
-                } else {
-                    it.dailyForecasts
-                },
+                selectedCity = if (editingAwayFromSelection) null else it.selectedCity,
+                rankedActivities = if (editingAwayFromSelection) emptyList() else it.rankedActivities,
+                dailyForecasts = if (editingAwayFromSelection) emptyList() else it.dailyForecasts,
             )
         }
         searchQueryFlow.value = query
-        if (clearsSelection) {
+        if (editingAwayFromSelection) {
             selectedCityFlow.value = null
         }
     }

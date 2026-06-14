@@ -46,7 +46,8 @@ di/             → Hilt modules (network, repository, domain)
 3. **`WeatherRepository` interface** allows mocking the data layer in ViewModel tests.
 4. **Explicit `HomeUiState`** exposed via `StateFlow`; the ViewModel exposes action methods (`onSearchQueryChanged`, `onCitySelected`, etc.) — classic MVVM, not MVI.
 5. **Debounced search** (350 ms) reduces Geocoding API calls while typing.
-6. **Typed errors** (`AppError`) map network, not-found, and invalid-response cases to user-facing messages.
+6. **`flatMapLatest` request cancellation** — search and rankings flows cancel in-flight work when the query or selected city changes, preventing stale responses from overwriting newer state.
+7. **Typed errors** (`AppError`) map network, not-found, and invalid-response cases to user-facing messages.
 
 ## How to build and run
 
@@ -79,7 +80,8 @@ di/             → Hilt modules (network, repository, domain)
 |------------|----------------|
 | `ActivityRankingEngineTest` | Scoring and ranking logic across cold/snowy, mild/dry, and rainy weeks |
 | `WeatherMappersTest` | DTO → domain mapping, empty payloads, and mismatched array lengths |
-| `HomeViewModelTest` | Debounced search, city selection, loading/error state, error dismissal |
+| `WeatherDisplayFormatTest` | Locale-aware forecast number rounding and decimal formatting |
+| `HomeViewModelTest` | Debounced search, city selection, stale response cancellation, loading/error state, error dismissal |
 
 **Strategy:** Unit tests target the highest-risk logic first: the ranking engine (core product value), API mapping edge cases, and ViewModel state transitions. The ViewModel is tested against mocked use cases so presentation logic stays isolated from networking. Compose UI tests are intentionally out of scope for this exercise to keep focus on correctness and maintainability within the time budget.
 
@@ -136,8 +138,9 @@ Scoring uses weighted combinations of Gaussian curves (for “ideal” ranges) a
 | Clean layering, DI, typed errors | Offline cache |
 | Ranking engine unit tests | Full Compose/UI test suite |
 | 7-day forecast summary in UI | Pull-to-refresh |
-| Debounced search | Advanced animations / polish |
-| Light & dark theme via Material 3 | Snapshot tests |
+| Debounced search + `flatMapLatest` stale-request cancellation | Advanced animations / polish |
+| Locale-aware forecast number formatting | Snapshot tests |
+| Light & dark theme via Material 3 | |
 
 Prioritized **architecture, correctness, and testability** over visual polish and feature volume, per the brief.
 
@@ -147,10 +150,10 @@ Before shipping to production, consider:
 
 - **Error analytics** and structured logging (remove BODY-level HTTP logging)
 - **Retry/backoff** for transient network failures
-- **Rate limiting** and request cancellation when the user types quickly
+- **Rate limiting** for API abuse (debounce and `flatMapLatest` already cancel in-flight stale responses)
 - **Accessibility** audit (content descriptions, TalkBack)
 - **ProGuard/R8** rules for Retrofit/serialization models
-- **Localization** (`strings.xml`, locale-aware geocoding)
+- **Localization** (`strings.xml`, locale-aware geocoding; forecast numbers already use locale-aware `DecimalFormat`, UI copy is still English-only)
 - **Certificate pinning** if threat model requires it
 
 ## AI usage disclosure

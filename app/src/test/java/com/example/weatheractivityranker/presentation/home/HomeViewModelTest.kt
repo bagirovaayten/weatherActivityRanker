@@ -14,6 +14,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -153,6 +154,88 @@ class HomeViewModelTest {
         advanceTimeBy(400)
 
         assertNull(viewModel.uiState.value.selectedCity)
+    }
+
+    @Test
+    fun `selecting another city cancels stale rankings response`() = runTest {
+        val paris = City(
+            id = 2L,
+            name = "Paris",
+            country = "France",
+            admin1 = null,
+            latitude = 48.85,
+            longitude = 2.35,
+        )
+        val berlinRanked = listOf(
+            RankedActivity(
+                activity = ActivityType.OUTDOOR_SIGHTSEEING,
+                score = 40,
+                rank = 1,
+                summary = "Berlin week",
+            ),
+        )
+        val parisRanked = listOf(
+            RankedActivity(
+                activity = ActivityType.OUTDOOR_SIGHTSEEING,
+                score = 90,
+                rank = 1,
+                summary = "Paris week",
+            ),
+        )
+        coEvery { getActivityRankingsUseCase(berlin) } coAnswers {
+            delay(1_000)
+            Result.success(
+                ActivityRankingsResult(
+                    forecast = WeatherForecast(berlin, emptyList()),
+                    rankedActivities = berlinRanked,
+                ),
+            )
+        }
+        coEvery { getActivityRankingsUseCase(paris) } returns Result.success(
+            ActivityRankingsResult(
+                forecast = WeatherForecast(paris, emptyList()),
+                rankedActivities = parisRanked,
+            ),
+        )
+        viewModel = HomeViewModel(searchCitiesUseCase, getActivityRankingsUseCase)
+
+        viewModel.onCitySelected(berlin)
+        viewModel.onCitySelected(paris)
+        advanceUntilIdle()
+
+        assertEquals(paris, viewModel.uiState.value.selectedCity)
+        assertEquals(parisRanked, viewModel.uiState.value.rankedActivities)
+        coVerify(exactly = 1) { getActivityRankingsUseCase(paris) }
+    }
+
+    @Test
+    fun `newer search cancels stale suggestions response`() = runTest {
+        coEvery { searchCitiesUseCase("Ber") } coAnswers {
+            delay(1_000)
+            Result.success(listOf(berlin))
+        }
+        coEvery { searchCitiesUseCase("Tok") } returns Result.success(
+            listOf(
+                City(
+                    id = 3L,
+                    name = "Tokyo",
+                    country = "Japan",
+                    admin1 = null,
+                    latitude = 35.68,
+                    longitude = 139.69,
+                ),
+            ),
+        )
+        viewModel = HomeViewModel(searchCitiesUseCase, getActivityRankingsUseCase)
+
+        viewModel.onSearchQueryChanged("Ber")
+        advanceTimeBy(400)
+        viewModel.onSearchQueryChanged("Tok")
+        advanceTimeBy(400)
+        advanceUntilIdle()
+
+        assertEquals("Tokyo, Japan", viewModel.uiState.value.citySuggestions.single().displayLabel)
+        coVerify(exactly = 1) { searchCitiesUseCase("Tok") }
     }
 
     @Test

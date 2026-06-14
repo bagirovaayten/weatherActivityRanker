@@ -26,7 +26,7 @@ Rankings are computed on-device from forecast data. No backend is required.
 
 - **minSdk**: 24  
 - **targetSdk / compileSdk**: 35  
-- **JDK**: 11  
+- **JDK**: 17  
 
 ## Architecture and technical decisions
 
@@ -54,7 +54,7 @@ di/             → Hilt modules (network, repository, domain)
 ### Prerequisites
 
 - Android Studio Ladybug or newer (or compatible CLI setup)
-- JDK 11+
+- JDK 17+
 - Android SDK 35
 
 ### Run on device/emulator
@@ -80,12 +80,13 @@ di/             → Hilt modules (network, repository, domain)
 |------------|----------------|
 | `ActivityRankingEngineTest` | Scoring and ranking logic across cold/snowy, mild/dry, and rainy weeks |
 | `WeatherMappersTest` | DTO → domain mapping, empty payloads, and mismatched array lengths |
+| `WeatherRepositoryImplTest` | MockWebServer integration for JSON parsing, success paths, and repository error mapping |
 | `WeatherDisplayFormatTest` | Locale-aware forecast number rounding and decimal formatting |
-| `HomeViewModelTest` | Debounced search, city selection, stale response cancellation, loading/error state, error dismissal |
+| `HomeViewModelTest` | Turbine-backed state emissions, debounced search, stale response cancellation, loading/error state |
 
-**Strategy:** Unit tests target the highest-risk logic first: the ranking engine (core product value), API mapping edge cases, and ViewModel state transitions. The ViewModel is tested against mocked use cases so presentation logic stays isolated from networking. Compose UI tests are intentionally out of scope for this exercise to keep focus on correctness and maintainability within the time budget.
+**Strategy:** Unit tests target the highest-risk logic first: the ranking engine (core product value), API mapping edge cases, repository networking/error mapping via MockWebServer, and ViewModel state emissions via Turbine. The ViewModel is tested against mocked use cases so presentation logic stays isolated from networking. Compose UI tests are intentionally out of scope for this exercise to keep focus on correctness and maintainability within the time budget.
 
-**What is not covered (yet):** end-to-end repository tests with MockWebServer, instrumented UI tests, and snapshot tests. These would be natural next steps before a production release.
+**What is not covered:** instrumented UI tests and snapshot tests. These were out of scope for the exercise time budget.
 
 ## API usage notes
 
@@ -139,22 +140,24 @@ Scoring uses weighted combinations of Gaussian curves (for “ideal” ranges) a
 | Ranking engine unit tests | Full Compose/UI test suite |
 | 7-day forecast summary in UI | Pull-to-refresh |
 | Debounced search + `flatMapLatest` stale-request cancellation | Advanced animations / polish |
-| Locale-aware forecast number formatting | Snapshot tests |
+| Locale-aware forecast number formatting + `strings.xml` UI copy | Snapshot tests |
+| Basic TalkBack semantics for search icon and score bars | Full accessibility audit |
 | Light & dark theme via Material 3 | |
 
 Prioritized **architecture, correctness, and testability** over visual polish and feature volume, per the brief.
 
-## Production-readiness notes
+## Out of scope for this exercise
 
-Before shipping to production, consider:
+The following were intentionally left out to keep the submission focused on architecture, correctness, and testability:
 
-- **Error analytics** and structured logging (remove BODY-level HTTP logging)
-- **Retry/backoff** for transient network failures
-- **Rate limiting** for API abuse (debounce and `flatMapLatest` already cancel in-flight stale responses)
-- **Accessibility** audit (content descriptions, TalkBack)
-- **ProGuard/R8** rules for Retrofit/serialization models
-- **Localization** (`strings.xml`, locale-aware geocoding; forecast numbers already use locale-aware `DecimalFormat`, UI copy is still English-only)
-- **Certificate pinning** if threat model requires it
+- **Offline cache** and pull-to-refresh
+- **Full Compose/UI test suite** and snapshot tests
+- **Error analytics**, structured logging, and retry/backoff
+- **Full localization** (UI copy is in `strings.xml`, but still English-only)
+- **Full accessibility audit** (basic TalkBack semantics added for search and score bars)
+- **ProGuard/R8** tuning and certificate pinning
+
+Debounce and `flatMapLatest` already handle in-flight stale responses during search and city selection.
 
 ## AI usage disclosure
 

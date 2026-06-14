@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">WeatherActivityRanker</string>
+    <string name="app_name">Weather Activity Ranker</string>
+    <string name="home_title">Weather Activity Ranker</string>
+    <string name="search_for_city">Search for a city</string>
+    <string name="search_placeholder">e.g. Berlin, Tokyo, Baku</string>
+    <string name="search_icon_content_description">Search</string>
+    <string name="loading_rankings">Loading 7-day forecast and rankings…</string>
+    <string name="best_activities_for">Best activities for</string>
+    <string name="ranked_by_suitability">Ranked by suitability over the next 7 days</string>
+    <string name="activity_score_out_of_100">%1$d/100</string>
+    <string name="activity_score_progress_description">Suitability score %1$d out of 100</string>
+    <string name="forecast_section_title">7-day forecast</string>
+    <string name="empty_state_message">Enter a city name to see activity recommendations for the next 7 days.</string>
 </resources>

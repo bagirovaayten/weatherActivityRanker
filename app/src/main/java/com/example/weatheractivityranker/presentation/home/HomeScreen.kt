@@ -37,8 +37,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.weatheractivityranker.R
 import com.example.weatheractivityranker.domain.model.City
 import com.example.weatheractivityranker.domain.model.DailyWeather
 import com.example.weatheractivityranker.domain.model.RankedActivity
@@ -74,7 +80,7 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Weather Activity Ranker") },
+                title = { Text(stringResource(R.string.home_title)) },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -138,15 +144,20 @@ private fun SearchSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Search for a city",
+            text = stringResource(R.string.search_for_city),
             style = MaterialTheme.typography.titleMedium,
         )
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("e.g. Berlin, Tokyo, Baku") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            placeholder = { Text(stringResource(R.string.search_placeholder)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = stringResource(R.string.search_icon_content_description),
+                )
+            },
             singleLine = true,
         )
         if (isSearching) {
@@ -183,7 +194,7 @@ private fun LoadingRankingsCard() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircularProgressIndicator()
-            Text("Loading 7-day forecast and rankings…")
+            Text(stringResource(R.string.loading_rankings))
         }
     }
 }
@@ -192,7 +203,7 @@ private fun LoadingRankingsCard() {
 private fun RankingsHeader(cityLabel: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = "Best activities for",
+            text = stringResource(R.string.best_activities_for),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -202,7 +213,7 @@ private fun RankingsHeader(cityLabel: String) {
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = "Ranked by suitability over the next 7 days",
+            text = stringResource(R.string.ranked_by_suitability),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -232,7 +243,7 @@ private fun RankedActivityCard(rankedActivity: RankedActivity) {
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "${rankedActivity.score}/100",
+                    text = stringResource(R.string.activity_score_out_of_100, rankedActivity.score),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -254,11 +265,19 @@ private fun ScoreProgressBar(
     score: Int,
     modifier: Modifier = Modifier,
 ) {
+    val progressDescription = stringResource(R.string.activity_score_progress_description, score)
     val progressShape = RoundedCornerShape(8.dp)
     val clampedProgress = (score / 100f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
+            .semantics {
+                contentDescription = progressDescription
+                progressBarRangeInfo = ProgressBarRangeInfo(
+                    current = score.toFloat(),
+                    range = 0f..100f,
+                )
+            }
             .height(4.dp)
             .clip(progressShape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -282,7 +301,7 @@ private fun ForecastSection(forecasts: List<DailyWeather>) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "7-day forecast",
+                text = stringResource(R.string.forecast_section_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -322,7 +341,7 @@ private fun EmptyStateCard() {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Enter a city name to see activity recommendations for the next 7 days.",
+                text = stringResource(R.string.empty_state_message),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }

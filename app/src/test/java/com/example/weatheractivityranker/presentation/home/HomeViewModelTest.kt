@@ -1,5 +1,7 @@
 package com.example.weatheractivityranker.presentation.home
 
+import app.cash.turbine.ReceiveTurbine
+import app.cash.turbine.test
 import com.example.weatheractivityranker.domain.model.ActivityType
 import com.example.weatheractivityranker.domain.model.AppError
 import com.example.weatheractivityranker.domain.model.City
@@ -64,14 +66,21 @@ class HomeViewModelTest {
         coEvery { searchCitiesUseCase("Ber") } returns Result.success(listOf(berlin))
         viewModel = HomeViewModel(searchCitiesUseCase, getActivityRankingsUseCase)
 
-        viewModel.onSearchQueryChanged("Ber")
-        advanceTimeBy(400)
-        advanceUntilIdle()
+        viewModel.uiState.test {
+            assertEquals(HomeUiState(), awaitItem())
 
-        val state = viewModel.uiState.value
-        assertEquals("Ber", state.searchQuery)
-        assertEquals(listOf(berlin), state.citySuggestions)
-        assertFalse(state.isSearching)
+            viewModel.onSearchQueryChanged("Ber")
+            assertEquals(
+                HomeUiState(searchQuery = "Ber"),
+                awaitItem(),
+            )
+
+            advanceTimeBy(400)
+            advanceUntilIdle()
+            val loaded = awaitStateWhere { it.citySuggestions == listOf(berlin) }
+            assertFalse(loaded.isSearching)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
@@ -199,12 +208,22 @@ class HomeViewModelTest {
         )
         viewModel = HomeViewModel(searchCitiesUseCase, getActivityRankingsUseCase)
 
-        viewModel.onCitySelected(berlin)
-        viewModel.onCitySelected(paris)
-        advanceUntilIdle()
+        viewModel.uiState.test {
+            assertEquals(HomeUiState(), awaitItem())
 
-        assertEquals(paris, viewModel.uiState.value.selectedCity)
-        assertEquals(parisRanked, viewModel.uiState.value.rankedActivities)
+            viewModel.onCitySelected(berlin)
+            viewModel.onCitySelected(paris)
+            advanceUntilIdle()
+
+            val loaded = awaitStateWhere {
+                it.selectedCity == paris &&
+                    !it.isLoadingRankings &&
+                    it.rankedActivities == parisRanked
+            }
+            assertEquals(parisRanked, loaded.rankedActivities)
+            cancelAndIgnoreRemainingEvents()
+        }
+
         coVerify(exactly = 1) { getActivityRankingsUseCase(paris) }
     }
 
@@ -228,13 +247,23 @@ class HomeViewModelTest {
         )
         viewModel = HomeViewModel(searchCitiesUseCase, getActivityRankingsUseCase)
 
-        viewModel.onSearchQueryChanged("Ber")
-        advanceTimeBy(400)
-        viewModel.onSearchQueryChanged("Tok")
-        advanceTimeBy(400)
-        advanceUntilIdle()
+        viewModel.uiState.test {
+            assertEquals(HomeUiState(), awaitItem())
 
-        assertEquals("Tokyo, Japan", viewModel.uiState.value.citySuggestions.single().displayLabel)
+            viewModel.onSearchQueryChanged("Ber")
+            assertEquals(HomeUiState(searchQuery = "Ber"), awaitItem())
+
+            viewModel.onSearchQueryChanged("Tok")
+            assertEquals(HomeUiState(searchQuery = "Tok"), awaitItem())
+            advanceTimeBy(400)
+            advanceTimeBy(400)
+            advanceUntilIdle()
+
+            val loaded = awaitStateWhere { it.citySuggestions.isNotEmpty() }
+            assertEquals("Tokyo, Japan", loaded.citySuggestions.single().displayLabel)
+            cancelAndIgnoreRemainingEvents()
+        }
+
         coVerify(exactly = 1) { searchCitiesUseCase("Tok") }
     }
 
@@ -248,5 +277,15 @@ class HomeViewModelTest {
         viewModel.onErrorDismissed()
 
         assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    private suspend fun ReceiveTurbine<HomeUiState>.awaitStateWhere(
+        predicate: (HomeUiState) -> Boolean,
+    ): HomeUiState {
+        var state = awaitItem()
+        while (!predicate(state)) {
+            state = awaitItem()
+        }
+        return state
     }
 }

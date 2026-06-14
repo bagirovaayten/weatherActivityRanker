@@ -1,12 +1,10 @@
 package com.example.weatheractivityranker.domain.usecase
 
-import com.example.weatheractivityranker.domain.model.AppError
 import com.example.weatheractivityranker.domain.model.City
 import com.example.weatheractivityranker.domain.model.RankedActivity
 import com.example.weatheractivityranker.domain.model.WeatherForecast
 import com.example.weatheractivityranker.domain.ranking.ActivityRankingEngine
 import com.example.weatheractivityranker.domain.repository.WeatherRepository
-import com.example.weatheractivityranker.domain.repository.mapAppError
 import javax.inject.Inject
 
 data class ActivityRankingsResult(
@@ -20,7 +18,6 @@ class GetActivityRankingsUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(city: City): Result<ActivityRankingsResult> {
         return repository.getForecast(city)
-            .mapAppError()
             .map { forecast ->
                 ActivityRankingsResult(
                     forecast = forecast,
@@ -37,6 +34,6 @@ class SearchCitiesUseCase @Inject constructor(
         if (query.isBlank()) {
             return Result.success(emptyList())
         }
-        return repository.searchCities(query.trim()).mapAppError()
+        return repository.searchCities(query.trim())
     }
 }

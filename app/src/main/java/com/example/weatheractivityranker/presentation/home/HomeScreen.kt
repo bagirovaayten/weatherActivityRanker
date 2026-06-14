@@ -283,10 +283,15 @@ private fun ForecastSection(forecasts: List<DailyWeather>) {
                     Text(formatter.format(day.date))
                     Text(
                         text = buildString {
-                            append("${day.temperatureMinCelsius.toInt()}–${day.temperatureMaxCelsius.toInt()}°C")
-                            append(" · ${day.precipitationMm}mm rain")
-                            if (day.snowfallCm > 0) append(" · ${day.snowfallCm}cm snow")
-                            append(" · ${day.windSpeedMaxKmh.toInt()}km/h wind")
+                            append(
+                                WeatherDisplayFormat.temperatureCelsius(day.temperatureMinCelsius) +
+                                    "–${WeatherDisplayFormat.temperatureCelsius(day.temperatureMaxCelsius)}°C",
+                            )
+                            append(" · ${WeatherDisplayFormat.precipitationMm(day.precipitationMm)}mm rain")
+                            if (day.snowfallCm > 0) {
+                                append(" · ${WeatherDisplayFormat.snowfallCm(day.snowfallCm)}cm snow")
+                            }
+                            append(" · ${WeatherDisplayFormat.windSpeedKmh(day.windSpeedMaxKmh)}km/h wind")
                         },
                         style = MaterialTheme.typography.bodySmall,
                     )
